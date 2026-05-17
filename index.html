@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Qusk AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9f9f9;
+            --bg-tertiary: #f3f4f6;
+            --bg-hover: #f0f0f0;
+            --border: #e5e7eb;
+            --border-light: #f0f0f0;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --accent: #10a37f;
+            --accent-hover: #0d8c6d;
+            --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --sidebar-width: 280px;
+            --header-height: 60px;
+            --input-height: 80px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Portrait Warning */
+        .portrait-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            z-index: 99999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+        .portrait-warning svg { width: 64px; height: 64px; color: var(--text-secondary); }
+        .portrait-warning h2 { font-size: 20px; color: var(--text-primary); }
+        .portrait-warning p { font-size: 14px; color: var(--text-secondary); max-width: 300px; line-height: 1.5; }
+
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            .portrait-warning { display: flex; }
+            .app-container { display: none !important; }
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            background: var(--bg-primary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1), margin-left 0.45s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s ease;
+            position: relative;
+            z-index: 50;
+        }
+        .sidebar.collapsed { transform: translateX(-100%); margin-left: calc(-1 * var(--sidebar-width)); opacity: 0.8; }
+        
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .btn-new {
+            flex: 1;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-weight: 500;
+        }
+        .btn-new:hover { background: var(--bg-hover); border-color: var(--text-tertiary); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .btn-new:active { transform: translateY(0) scale(0.98); }
+        
+        .search-box {
+            padding: 12px 16px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            padding: 0 32px 0 12px;
+            font-size: 13px;
+            outline: none;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .search-box input:focus { border-color: var(--text-tertiary); box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+        .search-box svg { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); width: 16px; height: 16px; pointer-events: none; transition: color 0.3s ease; }
+
+        .topic-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            user-select: none;
+        }
+        .topic-list::-webkit-scrollbar { width: 4px; }
+        .topic-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+        .topic-list:hover::-webkit-scrollbar-thumb { background: var(--border); }
+
+        .topic-item, .group-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            margin-bottom: 2px;
+            position: relative;
+            transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            gap: 10px;
+        }
+        .topic-item:hover, .group-item:hover { background: var(--bg-hover); transform: translateX(2px); }
+        .topic-item.active { background: var(--bg-hover); }
+        .topic-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) scaleY(0);
+            width: 3px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 0 2px 2px 0;
+            animation: slideInIndicator 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes slideInIndicator {
+            to { transform: translateY(-50%) scaleY(1); }
+        }
+        
+        .topic-icon { width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0; transition: color 0.25s ease; }
+        .topic-name {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: none;
+            background: transparent;
+            outline: none;
+            cursor: pointer;
+            transition: color 0.25s ease;
+        }
+        .topic-item.active .topic-name { color: var(--text-primary); font-weight: 500; }
+        .topic-actions { display: none; gap: 4px; opacity: 0; transition: opacity 0.2s ease; }
+        .topic-item:hover .topic-actions { display: flex; opacity: 1; }
+        .topic-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            color: var(--text-tertiary);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .topic-actions button:hover { color: var(--text-primary); background: var(--border-light); transform: scale(1.1); }
+
+        .group-item { font-weight: 500; }
+        .group-children { 
+            padding-left: 20px; 
+            display: none; 
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+            max-height: 0;
+            opacity: 0;
+        }
+        .group-children.expanded { 
+            display: block; 
+            max-height: 2000px;
+            opacity: 1;
+        }
+        .group-toggle { 
+            transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            width: 16px; 
+            height: 16px; 
+            color: var(--text-tertiary); 
+        }
+        .group-toggle.expanded { transform: rotate(90deg); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+
+        .top-bar {
+            height: var(--header-height);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(12px);
+            z-index: 40;
+        }
+        
+        .model-trigger {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .model-trigger:hover { background: var(--bg-hover); border-color: var(--border); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .model-trigger:active { transform: translateY(0) scale(0.97); }
+        .model-trigger svg { width: 16px; height: 16px; color: var(--text-secondary); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+
+        .center-title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            pointer-events: auto;
+            opacity: 0;
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .center-title.visible { opacity: 1; }
+        #centerTitle:hover { background: var(--bg-hover); border-color: var(--border); }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .icon-btn:active { transform: translateY(0) scale(0.92); }
+        .icon-btn svg { width: 20px; height: 20px; transition: transform 0.3s ease; }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-container::-webkit-scrollbar { width: 8px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+        .chat-container:hover::-webkit-scrollbar-thumb { background: var(--border); }
+
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            transition: opacity 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .welcome-screen.hidden {
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+            pointer-events: none;
+            position: absolute;
+        }
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            background: linear-gradient(135deg, #111827 0%, #374151 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .welcome-screen:hover .welcome-title { transform: scale(1.02); }
+        .welcome-input-wrapper {
+            width: 100%;
+            max-width: 720px;
+            position: relative;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .welcome-input-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .welcome-input-box:focus-within {
+            border-color: var(--text-tertiary);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.03), var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        .welcome-hint {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+        .welcome-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            resize: none;
+            background: transparent;
+            color: var(--text-primary);
+            min-height: 24px;
+            max-height: 200px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .welcome-input::placeholder { color: var(--text-tertiary); transition: opacity 0.3s ease; }
+        .welcome-input:focus::placeholder { opacity: 0.5; }
+        
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+        .input-tools {
+            display: flex;
+            gap: 8px;
+        }
+        .tool-btn {
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .tool-btn:hover { background: var(--bg-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .tool-btn:active { transform: translateY(0) scale(0.95); }
+        .tool-btn.active { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--text-tertiary); }
+        
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: var(--text-primary);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .send-btn:hover { transform: scale(1.08) rotate(-5deg); background: var(--text-secondary); box-shadow: var(--shadow-lg); }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Messages */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .messages-area.active { display: block; opacity: 1; animation: fadeInArea 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes fadeInArea {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-wrapper {
+            padding: 16px 20px;
+            display: flex;
+            gap: 16px;
+            max-width: 768px;
+            margin: 0 auto;
+            animation: slideUpFade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        @keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+        }
+        .message-avatar:hover { transform: scale(1.1); box-shadow: var(--shadow); }
+        .user-avatar { background: var(--text-primary); }
+        .ai-avatar { background: var(--accent); }
+        
+        .message-content {
+            flex: 1;
+            min-width: 0;
+            padding-top: 2px;
+            transition: transform 0.3s ease;
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .message-author {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: color 0.25s ease;
+        }
+        .message-time {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            transition: opacity 0.25s ease;
+        }
+        
+        .message-body {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            word-wrap: break-word;
+            transition: all 0.3s ease;
+        }
+        .message-body p { margin-bottom: 12px; transition: all 0.25s ease; }
+        .message-body p:last-child { margin-bottom: 0; }
+        .message-body pre {
+            background: #1f2937;
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            position: relative;
+            font-size: 13px;
+            line-height: 1.5;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .message-body pre:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+        .message-body code {
+            font-family: "SF Mono", Monaco, "Cascadia Code", Roboto Mono, Consolas, monospace;
+        }
+        .message-body p code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--accent);
+            transition: all 0.2s ease;
+        }
+        .message-body p code:hover { background: var(--bg-hover); }
+        .message-body pre code { color: #e5e7eb; background: none; padding: 0; }
+        
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: #111827;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            border-bottom: 1px solid #374151;
+            font-size: 12px;
+            color: #9ca3af;
+            transition: all 0.25s ease;
+        }
+        .code-lang { text-transform: uppercase; font-weight: 600; font-size: 11px; transition: color 0.2s ease; }
+        .copy-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .copy-btn:hover { color: white; background: #374151; transform: scale(1.05); }
+        .copy-btn:active { transform: scale(0.95); }
+        .copy-btn.copied { color: #10b981; }
+
+        .thinking-box {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin: 8px 0;
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .thinking-box:hover { box-shadow: var(--shadow); }
+        .thinking-header {
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            user-select: none;
+            transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .thinking-header:hover { background: var(--bg-hover); }
+        .thinking-icon { transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94); width: 14px; height: 14px; }
+        .thinking-box.expanded .thinking-icon { transform: rotate(90deg); }
+        .thinking-content {
+            padding: 0 14px 14px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease, padding 0.3s ease;
+        }
+        .thinking-box.expanded .thinking-content { 
+            max-height: 2000px; 
+            opacity: 1; 
+            padding: 0 14px 14px;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .message-wrapper:hover .message-actions { opacity: 1; transform: translateY(0); }
+        .msg-action-btn {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .msg-action-btn:hover { background: var(--bg-hover); color: var(--text-secondary); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .msg-action-btn:active { transform: translateY(0) scale(0.95); }
+        .msg-action-btn.active { color: #f59e0b; }
+
+        /* Bottom Input */
+        .bottom-input-area {
+            display: none;
+            padding: 16px 20px 24px;
+            background: linear-gradient(to top, var(--bg-primary) 80%, transparent);
+            position: sticky;
+            bottom: 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .bottom-input-area.active { 
+            display: block; 
+            animation: slideUpInput 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes slideUpInput {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .input-container {
+            max-width: 768px;
+            margin: 0 auto;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px 18px;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .input-container:focus-within {
+            border-color: var(--text-tertiary);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.03), var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .main-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            resize: none;
+            background: transparent;
+            color: var(--text-primary);
+            min-height: 24px;
+            max-height: 200px;
+            font-family: inherit;
+            line-height: 1.5;
+            transition: all 0.3s ease;
+        }
+        .main-input::placeholder { color: var(--text-tertiary); transition: opacity 0.3s ease; }
+        .main-input:focus::placeholder { opacity: 0.5; }
+
+        /* Image Generation Card */
+        .image-gen-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin: 12px 0;
+            max-width: 512px;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .image-gen-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+        .image-gen-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .image-gen-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: pulseIcon 2s ease-in-out infinite;
+        }
+        @keyframes pulseIcon {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(102, 126, 234, 0); }
+        }
+        .image-gen-title { font-weight: 600; font-size: 14px; }
+        .image-gen-status { font-size: 13px; color: var(--text-secondary); transition: color 0.3s ease; }
+        
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #34d399);
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            width: 0%;
+            position: relative;
+            overflow: hidden;
+        }
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            transition: all 0.3s ease;
+        }
+        .gen-image-result {
+            margin-top: 16px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            display: none;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .gen-image-result.show {
+            display: block;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .gen-image-result img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .gen-image-result img:hover { transform: scale(1.02); }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            backdrop-filter: blur(0px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: background 0.4s ease, backdrop-filter 0.4s ease, opacity 0.4s ease;
+        }
+        .modal-overlay.active { 
+            display: flex; 
+            opacity: 1; 
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-box {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.9) translateY(20px);
+            opacity: 0;
+            transition: all 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+            border: 1px solid var(--border);
+        }
+        .modal-overlay.active .modal-box { transform: scale(1) translateY(0); opacity: 1; }
+        
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title { font-size: 16px; font-weight: 600; }
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); transform: rotate(90deg); }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        /* Model Selector */
+        .model-list { display: flex; flex-direction: column; gap: 4px; }
+        .model-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: 1px solid transparent;
+            transform: translateX(0);
+        }
+        .model-option:hover { background: var(--bg-secondary); border-color: var(--border); transform: translateX(4px); box-shadow: var(--shadow); }
+        .model-option:active { transform: translateX(4px) scale(0.98); }
+        .model-option.selected { background: var(--bg-tertiary); border-color: var(--accent); transform: translateX(4px); }
+        .model-icon-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .model-option:hover .model-icon-box { transform: scale(1.1) rotate(-3deg); box-shadow: var(--shadow); }
+        .model-info { flex: 1; min-width: 0; }
+        .model-name { font-size: 14px; font-weight: 500; color: var(--text-primary); transition: color 0.2s ease; }
+        .model-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; transition: color 0.2s ease; }
+        .model-check { width: 16px; height: 16px; color: var(--accent); opacity: 0; transform: scale(0); transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .model-option.selected .model-check { opacity: 1; transform: scale(1); }
+
+        /* Settings */
+        .settings-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 0 8px 12px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .settings-tab {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            overflow: hidden;
+        }
+        .settings-tab:hover { background: var(--bg-hover); color: var(--text-primary); transform: translateY(-1px); }
+        .settings-tab:active { transform: translateY(0) scale(0.97); }
+        .settings-tab.active { background: var(--bg-tertiary); color: var(--text-primary); font-weight: 500; box-shadow: var(--shadow); }
+
+        .settings-panel { 
+            display: none; 
+            padding: 16px 8px; 
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .settings-panel.active { 
+            display: block; 
+            animation: panelSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes panelSlideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .setting-item {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .setting-item:hover { transform: translateX(2px); }
+        .setting-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            transition: color 0.2s ease;
+        }
+        .setting-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+            transition: color 0.2s ease;
+        }
+        .setting-input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            outline: none;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: monospace;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .setting-input:focus { 
+            border-color: var(--text-tertiary); 
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+            transform: translateY(-1px);
+        }
+        .setting-select {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            outline: none;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .setting-select:focus { 
+            border-color: var(--text-tertiary); 
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+        }
+        
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+        }
+        .toggle-row:hover { background: var(--bg-hover); transform: translateX(2px); box-shadow: var(--shadow); }
+        .toggle-label { font-size: 13px; font-weight: 500; transition: color 0.2s ease; }
+        .toggle-desc { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; transition: color 0.2s ease; }
+        .toggle-switch {
+            width: 40px;
+            height: 22px;
+            background: var(--border);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            flex-shrink: 0;
+        }
+        .toggle-switch.on { background: var(--accent); box-shadow: 0 0 8px rgba(16, 163, 127, 0.3); }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .toggle-switch.on::after { transform: translateX(18px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+
+        .favorites-list { display: flex; flex-direction: column; gap: 8px; }
+        .favorite-item {
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .favorite-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--text-tertiary); }
+        .favorite-time { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; transition: color 0.2s ease; }
+        .favorite-text { color: var(--text-primary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.2s ease; }
+
+        .about-box {
+            text-align: center;
+            padding: 24px 16px;
+        }
+        .about-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #111827 0%, #374151 100%);
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 20px;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .about-box:hover .about-logo { transform: rotate(-5deg) scale(1.05); box-shadow: var(--shadow-lg); }
+        .about-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; transition: color 0.2s ease; }
+        .about-version { font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px; transition: color 0.2s ease; }
+        .about-copy {
+            font-size: 12px;
+            color: var(--accent);
+            font-family: monospace;
+            background: var(--bg-tertiary);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            display: inline-block;
+            margin-top: 8px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+        }
+        .about-copy:hover { transform: scale(1.05); box-shadow: var(--shadow); }
+        .about-warning {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #ef4444;
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid #fecaca;
+            transition: all 0.3s ease;
+        }
+        .about-warning:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+        /* Sidebar Toggle */
+        .sidebar-toggle {
+            position: absolute;
+            left: 100%;
+            top: 12px;
+            margin-left: 8px;
+            width: 32px;
+            height: 32px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 60;
+            box-shadow: var(--shadow);
+            color: var(--text-secondary);
+            transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        .sidebar-toggle.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .sidebar-toggle:hover { 
+            background: var(--bg-hover); 
+            transform: scale(1.1); 
+            box-shadow: var(--shadow-lg);
+        }
+        .sidebar-toggle:active { transform: scale(0.95); }
+        .sidebar.collapsed + .sidebar-toggle { left: 0; margin-left: 12px; }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 0;
+            align-items: center;
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-tertiary);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Custom Scrollbar for modal */
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; transition: background 0.3s; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-tertiary);
+            transition: all 0.3s ease;
+        }
+        .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5; transition: all 0.3s ease; }
+        .empty-state:hover svg { opacity: 0.8; transform: scale(1.05); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; z-index: 50; height: 100%; box-shadow: var(--shadow-lg); }
+            .sidebar.collapsed { transform: translateX(-100%); margin-left: 0; }
+            .message-wrapper { padding: 12px 16px; }
+        }
+
+        /* Markdown tables */
+        .message-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+        .message-body th, .message-body td {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .message-body th { background: var(--bg-secondary); font-weight: 600; }
+        .message-body tr:nth-child(even) { background: var(--bg-secondary); }
+        .message-body tr { transition: background 0.2s ease; }
+        .message-body tr:hover { background: var(--bg-hover); }
+
+        /* Selection */
+        ::selection { background: rgba(16, 163, 127, 0.2); }
+    </style>
+</head>
+<body>
+
+    <!-- Portrait Warning -->
+    <div class="portrait-warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19H4.5a2.5 2.5 0 0 1 0-5h0m15 0h-6.5a2.5 2.5 0 0 0 0 5h0M12 2v20m0-10h.01"/></svg>
+        <h2>请旋转设备</h2>
+        <p>Qusk AI 专为横屏体验设计，请将设备旋转至横屏模式以获得最佳使用效果。</p>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div style="display:flex;align-items:center;gap:3px;font-size:18px;letter-spacing:-0.5px;margin-right:auto;user-select:none;">
+                    <span style="font-weight:700;color:var(--text-primary);">Qusk</span>
+                    <span style="font-weight:300;color:var(--text-tertiary);">AI</span>
+                </div>
+                <button class="btn-new" onclick="app.newTopic()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                    <span data-i18n="newChat">新建话题</span>
+                </button>
+                <button class="icon-btn" onclick="app.toggleSidebar()" title="收起侧边栏">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+                </button>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="topicSearch" placeholder="搜索话题..." oninput="app.searchTopics(this.value)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+
+            <div class="topic-list" id="topicList"></div>
+        </aside>
+
+        <!-- Sidebar Toggle (when collapsed) -->
+        <button class="sidebar-toggle" id="sidebarToggle" onclick="app.toggleSidebar()" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div style="width:80px;"></div>
+                
+                <div class="center-title visible" id="centerTitle" onclick="app.openModelSelector()" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid transparent;transition:all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);">
+                    <span style="font-weight:700;color:var(--text-primary);">Qusk</span>
+                    <span style="font-weight:300;color:var(--text-tertiary);">AI</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-tertiary);margin-left:2px;transition:transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                
+                <div class="header-actions">
+                    <button class="icon-btn" onclick="app.openSettings('favorites')" title="收藏">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="icon-btn" onclick="app.openSettings()" title="设置">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chatContainer">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-title">有什么可以帮你？</div>
+                    <div class="welcome-input-wrapper">
+                        <div class="welcome-hint"></div>
+                        <div class="welcome-input-box">
+                            <div id="welcomeImagePreview" style="display:none;margin-bottom:8px;"></div>
+                            <textarea class="welcome-input" id="welcomeInput" placeholder="随便问..." rows="1" onkeydown="app.handleWelcomeKey(event)"></textarea>
+                            <div class="input-footer">
+                                <div class="input-tools">
+                                    <button class="tool-btn" id="welcomeImageBtn" onclick="document.getElementById('imageInput').click()" style="display:none;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                        <span>图片</span>
+                                    </button>
+                                    <button class="tool-btn" id="deepThinkBtn" onclick="app.toggleDeepThink()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                                        <span>深度思考</span>
+                                    </button>
+                                </div>
+                                <button class="send-btn" onclick="app.sendFromWelcome()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div class="messages-area" id="messagesArea"></div>
+            </div>
+
+            <!-- Bottom Input -->
+            <div class="bottom-input-area" id="bottomInputArea">
+                <div class="input-container">
+                    <div id="bottomImagePreview" style="display:none;margin-bottom:8px;"></div>
+                    <div class="input-row">
+                        <textarea class="main-input" id="mainInput" placeholder="随便问..." rows="1" onkeydown="app.handleMainKey(event)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+                        <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+                            <button class="tool-btn" id="bottomImageBtn" onclick="document.getElementById('imageInput').click()" style="display:none;padding:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            </button>
+                            <button class="tool-btn" id="bottomThinkBtn" onclick="app.toggleDeepThink()" style="padding:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                            </button>
+                            <button class="send-btn" onclick="app.sendMessage()" id="sendBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="app.handleImageSelect(event)">
+
+    <!-- Model Selector Modal -->
+    <div class="modal-overlay" id="modelModal" onclick="if(event.target===this)app.closeModelSelector()">
+        <div class="modal-box" style="max-width:520px">
+            <div class="modal-header">
+                <div class="modal-title" data-i18n="selectModel">选择模型</div>
+                <button class="modal-close" onclick="app.closeModelSelector()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modelList"></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)app.closeSettings()">
+        <div class="modal-box" style="max-width:560px">
+            <div class="modal-header">
+                <div class="modal-title" data-i18n="settings">设置</div>
+                <button class="modal-close" onclick="app.closeSettings()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div style="display:flex;flex-direction:column;height:100%;">
+                <div class="settings-tabs" id="settingsTabs">
+                    <button class="settings-tab active" onclick="app.switchSettingTab('general')" data-i18n="general">通用</button>
+                    <button class="settings-tab" onclick="app.switchSettingTab('api')" data-i18n="api">API</button>
+                    <button class="settings-tab" onclick="app.switchSettingTab('advanced')" data-i18n="advanced">高级</button>
+                    <button class="settings-tab" onclick="app.switchSettingTab('favorites')" data-i18n="favorites">收藏</button>
+                    <button class="settings-tab" onclick="app.switchSettingTab('about')" data-i18n="about">关于</button>
+                </div>
+                <div class="modal-body" style="padding:0;">
+                    <!-- General -->
+                    <div class="settings-panel active" id="panel-general">
+                        <div style="padding:16px;">
+                            <div class="setting-item">
+                                <label class="setting-label" data-i18n="language">语言</label>
+                                <select class="setting-select" id="langSelect" onchange="app.changeLanguage(this.value)">
+                                    <option value="zh">简体中文</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-label" data-i18n="theme">主题</label>
+                                <select class="setting-select" id="themeSelect" onchange="app.changeTheme(this.value)">
+                                    <option value="light">浅色</option>
+                                    <option value="dark">深色</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- API -->
+                    <div class="settings-panel" id="panel-api">
+                        <div style="padding:16px;">
+                            <div class="toggle-row" style="margin-bottom:16px;">
+                                <div>
+                                    <div class="toggle-label" data-i18n="customApi">自定义 API</div>
+                                    <div class="toggle-desc" data-i18n="customApiDesc">使用自己的 API 地址和密钥</div>
+                                </div>
+                                <div class="toggle-switch" id="customApiToggle" onclick="app.toggleCustomApi()"></div>
+                            </div>
+                            
+                            <div id="defaultApiInfo" style="margin-bottom:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                                <div style="font-weight:600;margin-bottom:4px;color:var(--text-primary);">默认 API</div>
+                                <div>地址: <span style="font-family:monospace;color:var(--text-tertiary);">https://platform.aitools.cfd/...</span></div>
+                                <div>密钥: <span style="font-family:monospace;color:var(--text-tertiary);">sk-****...****</span></div>
+                            </div>
+
+                            <div id="customApiForm" style="display:none;">
+                                <div class="setting-item">
+                                    <label class="setting-label">API 地址</label>
+                                    <input type="text" class="setting-input" id="customApiUrl" placeholder="https://api.example.com/v1/chat/completions">
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-label">API 密钥</label>
+                                    <input type="password" class="setting-input" id="customApiKey" placeholder="sk-...">
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-label">模型名称</label>
+                                    <input type="text" class="setting-input" id="customModelName" placeholder="gpt-4, deepseek-chat...">
+                                    <div class="setting-desc">填写兼容 OpenAI 格式的模型名称</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced -->
+                    <div class="settings-panel" id="panel-advanced">
+                        <div style="padding:16px;">
+                            <div class="setting-item">
+                                <label class="setting-label">Temperature</label>
+                                <input type="range" min="0" max="2" step="0.1" value="0.7" id="tempRange" oninput="document.getElementById('tempVal').textContent=this.value" style="width:100%;margin-bottom:4px;">
+                                <div style="text-align:right;font-size:12px;color:var(--text-secondary);"><span id="tempVal">0.7</span></div>
+                            </div>
+                            <div class="setting-item">
+                                <label class="setting-label">Max Tokens</label>
+                                <input type="number" class="setting-input" id="maxTokens" value="4096" min="1" max="8192">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Favorites -->
+                    <div class="settings-panel" id="panel-favorites">
+                        <div style="padding:16px;">
+                            <div class="favorites-list" id="favoritesList"></div>
+                            <div class="empty-state" id="emptyFavorites" style="display:none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                <div>暂无收藏</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- About -->
+                    <div class="settings-panel" id="panel-about">
+                        <div class="about-box">
+                            <div class="about-logo">Q</div>
+                            <div class="about-title">Qusk AI</div>
+                            <div class="about-version">Version 1.0.0</div>
+                            <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;">
+                                由 yeziy114514 设计与开发<br>禁止未经授权的盗用与分发
+                            </div>
+                            <div class="about-copy">yeziy114514</div>
+                            <div class="about-warning">
+                                本应用仅供学习交流使用，请遵守相关 API 服务条款。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Context Menu -->
+    <div class="modal-overlay" id="groupMenuModal" onclick="if(event.target===this ```html
+.app.closeGroupMenu()">
+        <div class="modal-box" style="max-width:280px;">
+            <div class="modal-body" style="padding:8px;">
+                <div class="model-option" onclick="app.addTopicToGroup()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>在组内新建话题</span>
+                </div>
+                <div class="model-option" onclick="app.renameGroup()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>重命名</span>
+                </div>
+                <div class="model-option" onclick="app.deleteGroup()" style="color:#ef4444;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/></svg>
+                    <span>删除分组</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const DEFAULT_API_URL = 'https://platform.aitools.cfd/api/v1/chat/completions';
+        const DEFAULT_API_KEY = 'sk-2f362770790a4440afa6a5fa9bd39615';
+        
+        const MODELS = [
+            { id: 'deepseek/deepseek-r1-0528', name: 'DeepSeek R1 0528', provider: 'deepseek', icon: 'D', color: '#4F6FEF', thinking: true },
+            { id: 'deepseek/deepseek-v3-0324', name: 'DeepSeek V3 0324', provider: 'deepseek', icon: 'D', color: '#4F6FEF' },
+            { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'google', icon: 'G', color: '#4285F4' },
+            { id: 'google/gemma-3-27b', name: 'Gemma 3 27B', provider: 'google', icon: 'G', color: '#EA4335' },
+            { id: 'qwen/qwen2.5-7b', name: 'Qwen2.5 7B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'qwen/qwen2.5-72b', name: 'Qwen2.5 72B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'qwen/qwen2.5-vl-32b', name: 'Qwen2.5 VL 32B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'qwen/qwen3-8b', name: 'Qwen3 8B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'zhipu/glm-4-9b', name: 'GLM-4 9B', provider: 'zhipu', icon: 'Z', color: '#00B0FF' },
+            { id: 'zhipu/glm-4-flash', name: 'GLM-4 Flash', provider: 'zhipu', icon: 'Z', color: '#00B0FF' },
+            { id: 'zhipu/glm-4v-flash', name: 'GLM-4V Flash', provider: 'zhipu', icon: 'Z', color: '#00B0FF' },
+            { id: 'zhipu/glm-4.1v-thinking-flash', name: 'GLM-4.1V Thinking', provider: 'zhipu', icon: 'Z', color: '#00B0FF', thinking: true },
+            { id: 'qwen/qwen3-30b-a3b', name: 'Qwen3 30B A3B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'qwen/qwen3-14b', name: 'Qwen3 14B', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'qwen/qwen3-coder', name: 'Qwen3 Coder', provider: 'qwen', icon: 'Q', color: '#8C5BFF' },
+            { id: 'zhipu/glm-4.5-flash', name: 'GLM-4.5 Flash', provider: 'zhipu', icon: 'Z', color: '#00B0FF' },
+            { id: 'zhipu/glm-4.6v-flash', name: 'GLM-4.6V Flash', provider: 'zhipu', icon: 'Z', color: '#00B0FF' },
+            { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B', provider: 'openai', icon: 'O', color: '#10A37F' },
+            { id: 'xiaomi/mimo-v2-flash', name: 'MiMo V2 Flash', provider: 'xiaomi', icon: 'Mi', color: '#FF6900' }
+        ];
+
+        const I18N = {
+            zh: {
+                newChat: '新建话题', selectModel: '选择模型', settings: '设置',
+                general: '通用', api: 'API', advanced: '高级', favorites: '收藏', about: '关于',
+                language: '语言', theme: '主题', customApi: '自定义 API', customApiDesc: '使用自己的 API 地址和密钥',
+                thinking: '思考中...', deepThink: '深度思考', send: '发送',
+                placeholder: '随便问...', welcomeHint: '有什么可以帮你',
+                copy: '复制', copied: '已复制', favorite: '收藏', unfavorite: '取消收藏',
+                regenerate: '重新生成', delete: '删除', rename: '重命名',
+                newGroup: '新建分组', addToGroup: '在组内新建话题',
+                searchTopics: '搜索话题...', noTopics: '暂无话题',
+                imageGenerating: '正在生成图片...', imageComplete: '图片生成完成',
+                imagePrompt: '好的，这就为你生成'
+            },
+            en: {
+                newChat: 'New Chat', selectModel: 'Select Model', settings: 'Settings',
+                general: 'General', api: 'API', advanced: 'Advanced', favorites: 'Favorites', about: 'About',
+                language: 'Language', theme: 'Theme', customApi: 'Custom API', customApiDesc: 'Use your own API endpoint and key',
+                thinking: 'Thinking...', deepThink: 'Deep Think', send: 'Send',
+                placeholder: 'Ask anything...', welcomeHint: 'How can I help you',
+                copy: 'Copy', copied: 'Copied', favorite: 'Favorite', unfavorite: 'Unfavorite',
+                regenerate: 'Regenerate', delete: 'Delete', rename: 'Rename',
+                newGroup: 'New Group', addToGroup: 'New Topic in Group',
+                searchTopics: 'Search topics...', noTopics: 'No topics yet',
+                imageGenerating: 'Generating image...', imageComplete: 'Image generated',
+                imagePrompt: 'Okay, generating now'
+            }
+        };
+
+        // ==================== APP STATE ====================
+        const app = {
+            currentTopicId: null,
+            topics: [],
+            favorites: [],
+            settings: {
+                language: 'zh',
+                theme: 'light',
+                model: 'qwen/qwen2.5-72b',
+                deepThink: false,
+                customApi: false,
+                customApiUrl: '',
+                customApiKey: '',
+                customModelName: '',
+                temperature: 0.7,
+                maxTokens: 4096
+            },
+            isGenerating: false,
+            currentGroupId: null,
+            longPressTimer: null,
+            selectedImage: null,
+            
+            init() {
+                this.loadData();
+                this.renderTopics();
+                this.renderModelList();
+                this.updateModelDisplay();
+                this.applyTheme();
+                this.applyLanguage();
+                this.setupAutoResize();
+                this.updateImageUploadVisibility();
+                
+                // Auto-resize textarea
+                const welcomeInput = document.getElementById('welcomeInput');
+                welcomeInput.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+                
+                // Check sidebar state
+                if (window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('collapsed');
+                    document.getElementById('sidebarToggle').style.display = 'flex';
+                    document.getElementById('sidebarToggle').classList.add('show');
+                }
+                
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('collapsed')) {
+                        this.toggleSidebar();
+                    }
+                });
+                
+                // Ensure center title is always visible
+                document.getElementById('centerTitle').classList.add('visible');
+            },
+
+            loadData() {
+                const saved = localStorage.getItem('qusk_ai_data');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    this.topics = data.topics || [];
+                    this.favorites = data.favorites || [];
+                    Object.assign(this.settings, data.settings || {});
+                }
+                if (!this.topics.length) this.newTopic(true);
+                else this.loadTopic(this.topics[0].id);
+            },
+
+            saveData() {
+                localStorage.setItem('qusk_ai_data', JSON.stringify({
+                    topics: this.topics,
+                    favorites: this.favorites,
+                    settings: this.settings
+                }));
+            },
+
+            // ==================== TOPIC MANAGEMENT ====================
+            newTopic(silent = false, groupId = null) {
+                const id = Date.now().toString();
+                const topic = {
+                    id,
+                    name: this.getText('newChat'),
+                    messages: [],
+                    createdAt: Date.now(),
+                    groupId
+                };
+                this.topics.unshift(topic);
+                if (!silent) {
+                    this.loadTopic(id);
+                    this.saveData();
+                }
+                return topic;
+            },
+
+            newGroup() {
+                const id = 'group_' + Date.now();
+                const group = {
+                    id,
+                    name: '新分组',
+                    type: 'group',
+                    createdAt: Date.now(),
+                    expanded: true
+                };
+                this.topics.push(group);
+                this.renderTopics();
+                this.saveData();
+            },
+
+            loadTopic(id) {
+                this.currentTopicId = id;
+                const topic = this.topics.find(t => t.id === id);
+                if (!topic) return;
+                
+                this.renderTopics();
+                this.renderMessages(topic);
+                
+                const hasMessages = topic.messages && topic.messages.length > 0;
+                document.getElementById('welcomeScreen').classList.toggle('hidden', hasMessages);
+                document.getElementById('messagesArea').classList.toggle('active', hasMessages);
+                document.getElementById('bottomInputArea').classList.toggle('active', hasMessages);
+                document.getElementById('centerTitle').classList.add('visible');
+                
+                if (hasMessages) {
+                    setTimeout(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    }, 50);
+                }
+            },
+
+            deleteTopic(id) {
+                if (!confirm('确定要删除这个话题吗？')) return;
+                this.topics = this.topics.filter(t => t.id !== id && t.groupId !== id);
+                if (this.currentTopicId === id) {
+                    this.currentTopicId = this.topics.find(t => t.type !== 'group')?.id || null;
+                    if (this.currentTopicId) this.loadTopic(this.currentTopicId);
+                    else this.newTopic();
+                }
+                this.renderTopics();
+                this.saveData();
+            },
+
+            renameTopic(id) {
+                const topic = this.topics.find(t => t.id === id);
+                if (!topic) return;
+                const name = prompt('重命名:', topic.name);
+                if (name) {
+                    topic.name = name;
+                    this.renderTopics();
+                    this.saveData();
+                }
+            },
+
+            searchTopics(query) {
+                this.renderTopics(query.toLowerCase());
+            },
+
+            renderTopics(filter = '') {
+                const list = document.getElementById('topicList');
+                list.innerHTML = '';
+                
+                const groups = this.topics.filter(t => t.type === 'group');
+                const standalone = this.topics.filter(t => t.type !== 'group' && !t.groupId);
+                
+                // Render groups and their children
+                groups.forEach(group => {
+                    if (filter && !group.name.toLowerCase().includes(filter)) return;
+                    
+                    const groupEl = document.createElement('div');
+                    groupEl.className = 'group-item';
+                    groupEl.innerHTML = `
+                        <svg class="group-toggle ${group.expanded ? 'expanded' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                        <svg class="topic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span class="topic-name">${group.name}</span>
+                        <div class="topic-actions" style="display:flex;">
+                            <button onclick="event.stopPropagation();app.addTopicToGroup('${group.id}')" title="新建话题">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                            <button onclick="event.stopPropagation();app.deleteTopic('${group.id}')" title="删除">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Toggle expand
+                    groupEl.querySelector('.group-toggle').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        group.expanded = !group.expanded;
+                        this.renderTopics(filter);
+                        this.saveData();
+                    });
+                    
+                    // Long press context menu
+                    this.setupLongPress(groupEl, group.id);
+                    
+                    list.appendChild(groupEl);
+                    
+                    if (group.expanded) {
+                        const children = this.topics.filter(t => t.groupId === group.id);
+                        const childrenContainer = document.createElement('div');
+                        childrenContainer.className = `group-children ${group.expanded ? 'expanded' : ''}`;
+                        children.forEach(topic => {
+                            if (filter && !topic.name.toLowerCase().includes(filter)) return;
+                            childrenContainer.appendChild(this.createTopicEl(topic));
+                        });
+                        list.appendChild(childrenContainer);
+                    }
+                });
+                
+                // Standalone topics
+                standalone.forEach(topic => {
+                    if (filter && !topic.name.toLowerCase().includes(filter)) return;
+                    list.appendChild(this.createTopicEl(topic));
+                });
+                
+                if (!list.children.length) {
+                    list.innerHTML = `<div class="empty-state"><div>${this.getText('noTopics')}</div></div>`;
+                }
+            },
+
+            createTopicEl(topic) {
+                const el = document.createElement('div');
+                el.className = `topic-item ${topic.id === this.currentTopicId ? 'active' : ''}`;
+                el.innerHTML = `
+                    <svg class="topic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span class="topic-name">${topic.name}</span>
+                    <div class="topic-actions">
+                        <button onclick="event.stopPropagation();app.renameTopic('${topic.id}')" title="重命名">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onclick="event.stopPropagation();app.deleteTopic('${topic.id}')" title="删除">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                `;
+                el.addEventListener('click', () => this.loadTopic(topic.id));
+                return el;
+            },
+
+            setupLongPress(el, groupId) {
+                const start = () => {
+                    this.longPressTimer = setTimeout(() => {
+                        this.currentGroupId = groupId;
+                        document.getElementById('groupMenuModal').classList.add('active');
+                    }, 600);
+                };
+                const cancel = () => {
+                    clearTimeout(this.longPressTimer);
+                };
+                el.addEventListener('mousedown', start);
+                el.addEventListener('touchstart', start);
+                el.addEventListener('mouseup', cancel);
+                el.addEventListener('mouseleave', cancel);
+                el.addEventListener('touchend', cancel);
+            },
+
+            addTopicToGroup(groupId) {
+                const gid = groupId || this.currentGroupId;
+                if (!gid) return;
+                const topic = this.newTopic(false, gid);
+                topic.name = '新话题';
+                this.saveData();
+                this.closeGroupMenu();
+                this.renderTopics();
+            },
+
+            renameGroup() {
+                const group = this.topics.find(t => t.id === this.currentGroupId);
+                if (group) this.renameTopic(group.id);
+                this.closeGroupMenu();
+            },
+
+            deleteGroup() {
+                this.deleteTopic(this.currentGroupId);
+                this.closeGroupMenu();
+            },
+
+            closeGroupMenu() {
+                document.getElementById('groupMenuModal').classList.remove('active');
+                this.currentGroupId = null;
+            },
+
+            // ==================== IMAGE UPLOAD ====================
+            isVisionModel() {
+                return /vl|4v|4\.1v|4\.6v|vision/i.test(this.settings.model);
+            },
+
+            updateImageUploadVisibility() {
+                const isVision = this.isVisionModel();
+                const btns = [document.getElementById('welcomeImageBtn'), document.getElementById('bottomImageBtn')];
+                btns.forEach(btn => {
+                    if (btn) btn.style.display = isVision ? 'flex' : 'none';
+                });
+            },
+
+            handleImageSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.selectedImage = e.target.result;
+                    this.renderImagePreviews();
+                };
+                reader.readAsDataURL(file);
+                event.target.value = '';
+            },
+
+            renderImagePreviews() {
+                const previews = ['welcomeImagePreview', 'bottomImagePreview'];
+                previews.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (this.selectedImage) {
+                            el.style.display = 'block';
+                            el.innerHTML = `<div style="position:relative;display:inline-block;"><img src="${this.selectedImage}" style="max-height:60px;border-radius:6px;border:1px solid var(--border);"><button onclick="app.clearImage()" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--text-secondary);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;padding:0;">×</button></div>`;
+                        } else {
+                            el.style.display = 'none';
+                            el.innerHTML = '';
+                        }
+                    }
+                });
+            },
+
+            clearImage() {
+                this.selectedImage = null;
+                this.renderImagePreviews();
+            },
+
+            // ==================== CHAT ====================
+            handleWelcomeKey(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendFromWelcome();
+                }
+            },
+
+            handleMainKey(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            },
+
+            sendFromWelcome() {
+                const input = document.getElementById('welcomeInput');
+                const text = input.value.trim();
+                if ((!text && !this.selectedImage) || this.isGenerating) return;
+                
+                // Transition UI
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('messagesArea').classList.add('active');
+                document.getElementById('bottomInputArea').classList.add('active');
+                document.getElementById('centerTitle').classList.add('visible');
+                
+                let content = text;
+                if (this.selectedImage) {
+                    if (!this.isVisionModel()) {
+                        this.clearImage();
+                    } else {
+                        content = [
+                            {type: 'text', text: text || '描述这张图片'},
+                            {type: 'image_url', image_url: {url: this.selectedImage}}
+                        ];
+                    }
+                }
+                
+                input.value = '';
+                input.style.height = 'auto';
+                
+                this.addMessage(content, 'user');
+                this.selectedImage = null;
+                this.renderImagePreviews();
+                this.processAI(text);
+            },
+
+            sendMessage() {
+                const input = document.getElementById('mainInput');
+                const text = input.value.trim();
+                if ((!text && !this.selectedImage) || this.isGenerating) return;
+                
+                let content = text;
+                if (this.selectedImage) {
+                    if (!this.isVisionModel()) {
+                        this.clearImage();
+                    } else {
+                        content = [
+                            {type: 'text', text: text || '描述这张图片'},
+                            {type: 'image_url', image_url: {url: this.selectedImage}}
+                        ];
+                    }
+                }
+                
+                input.value = '';
+                input.style.height = 'auto';
+                
+                this.addMessage(content, 'user');
+                this.selectedImage = null;
+                this.renderImagePreviews();
+                this.processAI(text);
+            },
+
+            addMessage(content, role, extra = {}) {
+                const topic = this.topics.find(t => t.id === this.currentTopicId);
+                if (!topic) return;
+                
+                const msg = {
+                    id: Date.now().toString() + Math.random(),
+                    role,
+                    content,
+                    createdAt: Date.now(),
+                    ...extra
+                };
+                topic.messages.push(msg);
+                
+                // Auto rename on first message
+                if (topic.messages.length === 1 && role === 'user') {
+                    const renameText = Array.isArray(content) ? content.find(c => c.type === 'text')?.text || '图片' : content;
+                    topic.name = renameText.slice(0, 20) + (renameText.length > 20 ? '...' : '');
+                    this.renderTopics();
+                }
+                
+                this.renderMessages(topic);
+                this.saveData();
+                return msg;
+            },
+
+            renderMessages(topic) {
+                const area = document.getElementById('messagesArea');
+                area.innerHTML = '';
+                
+                topic.messages.forEach((msg, idx) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'message-wrapper';
+                    wrapper.style.animationDelay = (idx * 0.05) + 's';
+                    
+                    const isUser = msg.role === 'user';
+                    const avatar = document.createElement('div');
+                    avatar.className = `message-avatar ${isUser ? 'user-avatar' : 'ai-avatar'}`;
+                    avatar.textContent = isUser ? 'U' : 'AI';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'message-content';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'message-header';
+                    header.innerHTML = `
+                        <span class="message-author">${isUser ? 'You' : 'Qusk AI'}</span>
+                        <span class="message-time">${new Date(msg.createdAt).toLocaleTimeString()}</span>
+                    `;
+                    
+                    const body = document.createElement('div');
+                    body.className = 'message-body';
+                    
+                    // Handle content array (multimodal)
+                    let displayText = msg.content;
+                    let imageUrl = null;
+                    if (Array.isArray(msg.content)) {
+                        const textPart = msg.content.find(c => c.type === 'text');
+                        displayText = textPart?.text || '';
+                        const imgPart = msg.content.find(c => c.type === 'image_url');
+                        if (imgPart) imageUrl = imgPart.image_url?.url || imgPart.image_url;
+                    }
+                    
+                    if (msg.role === 'image_gen') {
+                        body.innerHTML = msg.html;
+                    } else if (msg.thinking) {
+                        const thinkId = 'think-' + msg.id;
+                        body.innerHTML = `
+                            <div class="thinking-box expanded" id="${thinkId}">
+                                <div class="thinking-header" onclick="document.getElementById('${thinkId}').classList.toggle('expanded')">
+                                    <svg class="thinking-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                                    <span>${this.getText('thinking')}</span>
+                                </div>
+                                <div class="thinking-content">${this.escapeHtml(msg.thinking)}</div>
+                            </div>
+                            <div>${this.renderMarkdown(displayText)}</div>
+                        `;
+                    } else {
+                        body.innerHTML = this.renderMarkdown(displayText);
+                        if (imageUrl) {
+                            const imgDiv = document.createElement('div');
+                            imgDiv.style.marginTop = '8px';
+                            imgDiv.innerHTML = `<img src="${imageUrl}" style="max-width:200px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all 0.3s ease;" onclick="window.open(this.src)" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">`;
+                            body.appendChild(imgDiv);
+                        }
+                    }
+                    
+                    content.appendChild(header);
+                    content.appendChild(body);
+                    
+                    // Actions for AI messages
+                    if (!isUser && msg.role !== 'image_gen') {
+                        const actions = document.createElement('div');
+                        actions.className = 'message-actions';
+                        const isFav = this.favorites.some(f => f.msgId === msg.id);
+                        actions.innerHTML = `
+                            <button class="msg-action-btn ${isFav ? 'active' : ''}" onclick="app.toggleFavorite('${msg.id}')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                <span>${isFav ? this.getText('unfavorite') : this.getText('favorite')}</span>
+                            </button>
+                            <button class="msg-action-btn" onclick="app.copyMessage('${msg.id}')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>${this.getText('copy')}</span>
+                            </button>
+                        `;
+                        content.appendChild(actions);
+                    }
+                    
+                    wrapper.appendChild(avatar);
+                    wrapper.appendChild(content);
+                    area.appendChild(wrapper);
+                });
+                
+                // Scroll to bottom
+                setTimeout(() => {
+                    const container = document.getElementById('chatContainer');
+                    container.scrollTop = container.scrollHeight;
+                }, 10);
+                
+                // Highlight code
+                setTimeout(() => {
+                    document.querySelectorAll('pre code').forEach(block => {
+                        hljs.highlightElement(block);
+                    });
+                }, 50);
+            },
+
+            renderMarkdown(text) {
+                if (!text) return '';
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: false
+                });
+                
+                const renderer = new marked.Renderer();
+                renderer.code = (code, language) => {
+                    const lang = language || 'text';
+                    const escaped = this.escapeHtml(code);
+                    return `
+                        <div class="code-header">
+                            <span class="code-lang">${lang}</span>
+                            <button class="copy-btn" onclick="app.copyCode(this)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>${this.getText('copy')}</span>
+                            </button>
+                        </div>
+                        <pre><code class="language-${lang}">${escaped}</code></pre>
+                    `;
+                };
+                
+                return marked.parse(text, { renderer });
+            },
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
+
+            // ==================== AI PROCESSING ====================
+            async processAI(userText) {
+                const isImageRequest = /生成图片|画图|画一张|画个|生成图像|image|draw|generate.*pic/i.test(userText);
+                
+                if (isImageRequest) {
+                    this.addMessage(this.getText('imagePrompt'), 'assistant');
+                    
+                    const prompt = userText.replace(/生成图片|画图|画一张|画个|生成图像|draw|generate.*pic/i, '').trim() || userText;
+                    const genId = 'gen-' + Date.now();
+                    
+                    const cardHtml = `
+                        <div class="image-gen-card" id="${genId}">
+                            <div class="image-gen-header">
+                                <div class="image-gen-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                </div>
+                                <div>
+                                    <div class="image-gen-title">${this.getText('imageGenerating')}</div>
+                                    <div class="image-gen-status" id="${genId}-status">初始化...</div>
+                                </div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" id="${genId}-bar"></div></div>
+                            <div class="progress-text" id="${genId}-pct">0%</div>
+                            <div class="gen-image-result" id="${genId}-img"></div>
+                        </div>
+                    `;
+                    
+                    this.addMessage(cardHtml, 'image_gen', { html: cardHtml });
+                    
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 15 + 5;
+                        if (progress > 95) progress = 95;
+                        const bar = document.getElementById(`${genId}-bar`);
+                        const pct = document.getElementById(`${genId}-pct`);
+                        const status = document.getElementById(`${genId}-status`);
+                        if (bar) bar.style.width = progress + '%';
+                        if (pct) pct.textContent = Math.floor(progress) + '%';
+                        if (status) status.textContent = progress < 30 ? '构思中...' : progress < 70 ? '绘制中...' : '优化细节...';
+                    }, 400);
+                    
+                    const encoded = encodeURIComponent(prompt);
+                    const seed = Math.floor(Math.random() * 100000);
+                    const imgUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true`;
+                    
+                    const img = new Image();
+                    img.onload = () => {
+                        clearInterval(interval);
+                        const bar = document.getElementById(`${genId}-bar`);
+                        const pct = document.getElementById(`${genId}-pct`);
+                        const status = document.getElementById(`${genId}-status`);
+                        const resultDiv = document.getElementById(`${genId}-img`);
+                        
+                        if (bar) bar.style.width = '100%';
+                        if (pct) pct.textContent = '100%';
+                        if (status) status.textContent = this.getText('imageComplete');
+                        if (resultDiv) {
+                            resultDiv.classList.add('show');
+                            resultDiv.innerHTML = `<img src="${imgUrl}" alt="Generated image" style="max-width:100%;border-radius:8px;">`;
+                        }
+                        
+                        const topic = this.topics.find(t => t.id === this.currentTopicId);
+                        const msg = topic.messages[topic.messages.length - 1];
+                        msg.html = document.getElementById(genId)?.outerHTML || '';
+                        this.saveData();
+                    };
+                    img.src = imgUrl;
+                    
+                    setTimeout(() => {
+                        if (!img.complete) {
+                            clearInterval(interval);
+                            const status = document.getElementById(`${genId}-status`);
+                            if (status) status.textContent = '生成完成';
+                        }
+                    }, 30000);
+                    
+                    return;
+                }
+                
+                this.isGenerating = true;
+                document.getElementById('sendBtn').disabled = true;
+                
+                const topic = this.topics.find(t => t.id === this.currentTopicId);
+                const tempId = 'temp-' + Date.now();
+                const typingWrapper = document.createElement('div');
+                typingWrapper.className = 'message-wrapper';
+                typingWrapper.id = tempId;
+                typingWrapper.innerHTML = `
+                    <div class="message-avatar ai-avatar">AI</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Qusk AI</span>
+                        </div>
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('messagesArea').appendChild(typingWrapper);
+                document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+                
+                const messages = topic.messages
+                    .filter(m => m.role === 'user' || m.role === 'assistant')
+                    .map(m => ({ role: m.role, content: m.content }));
+                
+                const model = MODELS.find(m => m.id === this.settings.model) || MODELS[0];
+                const useCustom = this.settings.customApi;
+                const apiUrl = useCustom ? this.settings.customApiUrl : DEFAULT_API_URL;
+                const apiKey = useCustom ? this.settings.customApiKey : DEFAULT_API_KEY;
+                const modelName = useCustom ? this.settings.customModelName : model.id;
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: modelName,
+                            messages: messages,
+                            stream: true,
+                            temperature: this.settings.temperature,
+                            max_tokens: this.settings.maxTokens
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('API Error: ' + response.status);
+                    
+                    typingWrapper.remove();
+                    
+                    const aiMsg = {
+                        id: tempId,
+                        role: 'assistant',
+                        content: '',
+                        thinking: '',
+                        createdAt: Date.now()
+                    };
+                    topic.messages.push(aiMsg);
+                    
+                    this.renderMessages(topic);
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let inThinkTag = false;
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+                        
+                        for (const line of lines) {
+                            if (!line.trim() || line.startsWith(':')) continue;
+                            const data = line.replace(/^data: /, '').trim();
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const json = JSON.parse(data);
+                                const delta = json.choices?.[0]?.delta;
+                                if (!delta) continue;
+                                
+                                if (delta.reasoning_content) {
+                                    aiMsg.thinking += delta.reasoning_content;
+                                }
+                                
+                                let content = delta.content || '';
+                                
+                                if (content.includes('<thinking>')) {
+                                    inThinkTag = true;
+                                    content = content.replace('<thinking>', '');
+                                }
+                                if (content.includes('</thinking>')) {
+                                    inThinkTag = false;
+                                    content = content.replace('</thinking>', '');
+                                }
+                                
+                                if (inThinkTag || (aiMsg.thinking && !delta.content)) {
+                                    aiMsg.thinking += content;
+                                } else {
+                                    aiMsg.content += content;
+                                }
+                                
+                                this.updateLastMessage(topic);
+                            } catch (e) {}
+                        }
+                    }
+                    
+                    this.renderMessages(topic);
+                    
+                } catch (err) {
+                    typingWrapper.remove();
+                    this.addMessage('抱歉，发生了错误: ' + err.message, 'assistant');
+                } finally {
+                    this.isGenerating = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    this.saveData();
+                }
+            },
+
+            updateLastMessage(topic) {
+                const area = document.getElementById('messagesArea');
+                const lastWrapper = area.lastElementChild;
+                if (!lastWrapper) return;
+                
+                const body = lastWrapper.querySelector('.message-body');
+                const msg = topic.messages[topic.messages.length - 1];
+                
+                if (msg.thinking && !body.querySelector('.thinking-box')) {
+                    this.renderMessages(topic);
+                } else if (!msg.thinking) {
+                    if (!body.querySelector('.thinking-box')) {
+                        body.innerHTML = this.renderMarkdown(msg.content);
+                        setTimeout(() => hljs.highlightAll(), 10);
+                    }
+                }
+            },
+
+            // ==================== UI HELPERS ====================
+            toggleDeepThink() {
+                this.settings.deepThink = !this.settings.deepThink;
+                const btns = [document.getElementById('deepThinkBtn'), document.getElementById('bottomThinkBtn')];
+                btns.forEach(btn => btn?.classList.toggle('active', this.settings.deepThink));
+                this.saveData();
+            },
+
+            copyCode(btn) {
+                const code = btn.closest('.message-body').querySelector('code').textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    btn.classList.add('copied');
+                    const span = btn.querySelector('span');
+                    const orig = span.textContent;
+                    span.textContent = this.getText('copied');
+                    setTimeout(() => {
+                        btn.classList.remove('copied');
+                        span.textContent = orig;
+                    }, 2000);
+                });
+            },
+
+            copyMessage(msgId) {
+                const topic = this.topics.find(t => t.id === this.currentTopicId);
+                const msg = topic.messages.find(m => m.id === msgId);
+                if (msg) navigator.clipboard.writeText(Array.isArray(msg.content) ? msg.content.find(c => c.type === 'text')?.text || '' : msg.content);
+            },
+
+            toggleFavorite(msgId) {
+                const idx = this.favorites.findIndex(f => f.msgId === msgId);
+                if (idx >= 0) {
+                    this.favorites.splice(idx, 1);
+                } else {
+                    const topic = this.topics.find(t => t.id === this.currentTopicId);
+                    const msg = topic.messages.find(m => m.id === msgId);
+                    if (msg) this.favorites.push({ msgId, content: Array.isArray(msg.content) ? msg.content.find(c => c.type === 'text')?.text || '' : msg.content, time: Date.now() });
+                }
+                this.renderMessages(topic);
+                this.saveData();
+                if (document.getElementById('settingsModal').classList.contains('active')) {
+                    this.renderFavorites();
+                }
+            },
+
+            // ==================== MODEL SELECTOR ====================
+            openModelSelector() {
+                document.getElementById('modelModal').classList.add('active');
+                this.renderModelList();
+            },
+
+            closeModelSelector() {
+                document.getElementById('modelModal').classList.remove('active');
+            },
+
+            renderModelList() {
+                const list = document.getElementById('modelList');
+                list.innerHTML = '';
+                
+                const providers = {};
+                MODELS.forEach(m => {
+                    if (!providers[m.provider]) providers[m.provider] = [];
+                    providers[m.provider].push(m);
+                });
+                
+                Object.entries(providers).forEach(([provider, models]) => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.style.marginBottom = '8px';
+                    
+                    const label = document.createElement('div');
+                    label.style.cssText = 'font-size:11px;text-transform:uppercase;color:var(--text-tertiary);padding:8px 12px;font-weight:600;letter-spacing:0.5px;';
+                    label.textContent = provider;
+                    groupDiv.appendChild(label);
+                    
+                    models.forEach(model => {
+                        const el = document.createElement('div');
+                        el.className = `model-option ${model.id === this.settings.model ? 'selected' : ''}`;
+                        el.innerHTML = `
+                            <div class="model-icon-box" style="background:${model.color}">${model.icon}</div>
+                            <div class="model-info">
+                                <div class="model-name">${model.name}</div>
+                                <div class="model-desc">${model.thinking ? '支持深度思考' : provider}</div>
+                            </div>
+                            <svg class="model-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                        `;
+                        el.addEventListener('click', () => {
+                            this.settings.model = model.id;
+                            this.updateModelDisplay();
+                            this.renderModelList();
+                            this.updateImageUploadVisibility();
+                            setTimeout(() => this.closeModelSelector(), 200);
+                            this.saveData();
+                        });
+                        groupDiv.appendChild(el);
+                    });
+                    
+                    list.appendChild(groupDiv);
+                });
+            },
+
+            updateModelDisplay() {
+                this.updateImageUploadVisibility();
+            },
+
+            // ==================== SETTINGS ====================
+            openSettings(tab = 'general') {
+                document.getElementById('settingsModal').classList.add('active');
+                this.switchSettingTab(tab);
+                
+                document.getElementById('langSelect').value = this.settings.language;
+                document.getElementById('themeSelect').value = this.settings.theme;
+                document.getElementById('customApiUrl').value = this.settings.customApiUrl;
+                document.getElementById('customApiKey').value = this.settings.customApiKey;
+                document.getElementById('customModelName').value = this.settings.customModelName;
+                document.getElementById('tempRange').value = this.settings.temperature;
+                document.getElementById('tempVal').textContent = this.settings.temperature;
+                document.getElementById('maxTokens').value = this.settings.maxTokens;
+                
+                document.getElementById('customApiToggle').classList.toggle('on', this.settings.customApi);
+                document.getElementById('customApiForm').style.display = this.settings.customApi ? 'block' : 'none';
+                document.getElementById('defaultApiInfo').style.display = this.settings.customApi ? 'none' : 'block';
+                
+                this.renderFavorites();
+            },
+
+            closeSettings() {
+                this.settings.customApiUrl = document.getElementById('customApiUrl').value;
+                this.settings.customApiKey = document.getElementById('customApiKey').value;
+                this.settings.customModelName = document.getElementById('customModelName').value;
+                this.settings.temperature = parseFloat(document.getElementById('tempRange').value);
+                this.settings.maxTokens = parseInt(document.getElementById('maxTokens').value);
+                this.saveData();
+                
+                document.getElementById('settingsModal').classList.remove('active');
+            },
+
+            switchSettingTab(tab) {
+                document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+                event.target?.classList.add('active');
+                document.getElementById('panel-' + tab)?.classList.add('active');
+            },
+
+            toggleCustomApi() {
+                this.settings.customApi = !this.settings.customApi;
+                document.getElementById('customApiToggle').classList.toggle('on', this.settings.customApi);
+                document.getElementById('customApiForm').style.display = this.settings.customApi ? 'block' : 'none';
+                document.getElementById('defaultApiInfo').style.display = this.settings.customApi ? 'none' : 'block';
+                this.saveData();
+            },
+
+            changeLanguage(lang) {
+                this.settings.language = lang;
+                this.applyLanguage();
+                this.saveData();
+            },
+
+            changeTheme(theme) {
+                this.settings.theme = theme;
+                this.applyTheme();
+                this.saveData();
+            },
+
+            applyLanguage() {
+                const texts = I18N[this.settings.language] || I18N.zh;
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (texts[key]) el.textContent = texts[key];
+                });
+                document.getElementById('welcomeInput').placeholder = texts.placeholder;
+                document.getElementById('mainInput').placeholder = texts.placeholder;
+                document.getElementById('topicSearch').placeholder = texts.searchTopics;
+            },
+
+            applyTheme() {
+                const root = document.documentElement;
+                if (this.settings.theme === 'dark') {
+                    root.style.setProperty('--bg-primary', '#111827');
+                    root.style.setProperty('--bg-secondary', '#1f2937');
+                    root.style.setProperty('--bg-tertiary', '#374151');
+                    root.style.setProperty('--bg-hover', '#1f2937');
+                    root.style.setProperty('--border', '#374151');
+                    root.style.setProperty('--border-light', '#1f2937');
+                    root.style.setProperty('--text-primary', '#f9fafb');
+                    root.style.setProperty('--text-secondary', '#9ca3af');
+                    root.style.setProperty('--text-tertiary', '#6b7280');
+                } else {
+                    root.style.setProperty('--bg-primary', '#ffffff');
+                    root.style.setProperty('--bg-secondary', '#f9f9f9');
+                    root.style.setProperty('--bg-tertiary', '#f3f4f6');
+                    root.style.setProperty('--bg-hover', '#f0f0f0');
+                    root.style.setProperty('--border', '#e5e7eb');
+                    root.style.setProperty('--border-light', '#f0f0f0');
+                    root.style.setProperty('--text-primary', '#111827');
+                    root.style.setProperty('--text-secondary', '#6b7280');
+                    root.style.setProperty('--text-tertiary', '#9ca3af');
+                }
+            },
+
+            renderFavorites() {
+                const list = document.getElementById('favoritesList');
+                const empty = document.getElementById('emptyFavorites');
+                
+                if (!this.favorites.length) {
+                    list.innerHTML = '';
+                    empty.style.display = 'block';
+                    return;
+                }
+                
+                empty.style.display = 'none';
+                list.innerHTML = this.favorites.map(f => `
+                    <div class="favorite-item">
+                        <div class="favorite-time">${new Date(f.time).toLocaleString()}</div>
+                        <div class="favorite-text">${this.escapeHtml(f.content)}</div>
+                    </div>
+                `).join('');
+            },
+
+            // ==================== MISC ====================
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const toggle = document.getElementById('sidebarToggle');
+                sidebar.classList.toggle('collapsed');
+                
+                if (sidebar.classList.contains('collapsed')) {
+                    toggle.style.display = 'flex';
+                    setTimeout(() => toggle.classList.add('show'), 50);
+                } else {
+                    toggle.classList.remove('show');
+                    setTimeout(() => { toggle.style.display = 'none'; }, 400);
+                }
+            },
+
+            getText(key) {
+                return (I18N[this.settings.language] || I18N.zh)[key] || key;
+            },
+
+            setupAutoResize() {}
+        };
+
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
